@@ -1,1 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>    
+  <meta charset="UTF-8">    
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+  <title>Sony Liv</title>       
 
+  <!-- Shaka Player JS & CSS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">    
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background: #000;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .shaka-video-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      object-fit: contain;
+    }
+    /* Hide loading spinner */
+    .shaka-spinner-container,
+    .shaka-spinner,
+    .shaka-spinner-svg {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+  </style>
+</head>
+<body>    
+
+  <!-- ✅ Correct video + container structure -->
+  <div data-shaka-player-container class="shaka-video-container" shaka-controls="true">
+    <video autoplay playsinline muted></video>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      shaka.polyfill.installAll();
+
+      if (!shaka.Player.isBrowserSupported()) {
+        console.error('Browser not supported');
+        return;
+      }
+
+      const video = document.querySelector('video');
+      const player = new shaka.Player(video);
+
+      // UI Overlay
+      const container = document.querySelector('.shaka-video-container');
+      const ui = new shaka.ui.Overlay(player, container, video);
+
+      ui.configure({
+        controlPanelElements: [
+          'play_pause', 'time_and_duration', 'mute', 'volume',
+          'spacer', 'language', 'captions', 'picture_in_picture',
+          'quality', 'fullscreen'
+        ],
+        volumeBarColors: {
+          base: 'rgba(255, 192, 203, 0.3)',
+          level: 'rgb(255, 105, 180)'
+        },
+        seekBarColors: {
+          base: 'rgba(255, 255, 0, 0.3)',
+          buffered: 'rgba(255, 255, 0, 0.6)',
+          played: 'rgb(255, 255, 0)'
+        }
+      });
+
+      // ✅ DRM Keys
+      const drmConfig = {
+        clearKeys: {
+          "31b13c6f241055aaa965263f3115e684": "61f0cbc9599925a7be93d45e30b8ebe9"
+        }
+      };
+
+      // ✅ Cookie Header
+      const cookieHeader = "__hdnea__=st=1758820205~exp=1758906605~acl=/*~hmac=f2d1d44f339a0eff6bc358bf63e3b001bbd73a525e0c4a64feec2b193e792def";
+
+      // ✅ Stream URL
+      const streamUrl = "https://jiotvbpkmob.cdn.jio.com/bpk-tv/Asia_Cup_Hindi_MOB/WDVLive/index.mpd?__hdnea__=st=1758645008~exp=1758731408~acl=/*~hmac=96407bc725ea1c6c6f70fc37a44232ba314ee0fdbcca166343a1516c4e347ff9";
+
+      // Configure player
+      player.configure({
+        drm: drmConfig,
+        streaming: {
+          lowLatencyMode: true,
+          bufferingGoal: 15,
+          rebufferingGoal: 2,
+          bufferBehind: 15
+        }
+      });
+
+      // ✅ Add custom headers
+      player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        request.headers['Referer'] = 'https://www.jiotv.com/';
+        request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
+        request.headers['Cookie'] = cookieHeader;
+      });
+
+      // Error handling
+      player.addEventListener('error', (event) => {
+        console.error('Shaka Player Error:', event.detail);
+      });
+
+      try {
+        await player.load(streamUrl);
+        console.log('Stream loaded successfully');
+        video.muted = false;
+        await video.play().catch(() => {
+          console.log('Autoplay blocked, waiting for user interaction');
+        });
+      } catch (error) {
+        console.error('Load error:', error);
+      }
+    });
+  </script>
+
+</body>
+</html>
